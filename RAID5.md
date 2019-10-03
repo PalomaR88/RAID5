@@ -244,11 +244,217 @@ prueba
 
 
 ### Tarea 7: Una vez marcado como estropeado, lo tenemos que retirar del raid.
-    
+
+~~~
+vagrant@Almacenamiento:~$ sudo mdadm --manage /dev/md1 --remove /dev/sdb
+mdadm: hot removed /dev/sdb from /dev/md1
+vagrant@Almacenamiento:~$ sudo mdadm --detail /dev/md1
+/dev/md1:
+           Version : 1.2
+     Creation Time : Thu Oct  3 15:34:59 2019
+        Raid Level : raid5
+        Array Size : 1046528 (1022.00 MiB 1071.64 MB)
+     Used Dev Size : 1046528 (1022.00 MiB 1071.64 MB)
+      Raid Devices : 2
+     Total Devices : 2
+       Persistence : Superblock is persistent
+
+       Update Time : Thu Oct  3 16:21:40 2019
+             State : clean 
+    Active Devices : 2
+   Working Devices : 2
+    Failed Devices : 0
+     Spare Devices : 0
+
+            Layout : left-symmetric
+        Chunk Size : 512K
+
+Consistency Policy : resync
+
+              Name : Almacenamiento:1  (local to host Almacenamiento)
+              UUID : 3257002e:c399d4cf:acd05aab:66463050
+            Events : 38
+
+    Number   Major   Minor   RaidDevice State
+       2       8       48        0      active sync   /dev/sdd
+       3       8       32        1      active sync   /dev/sdc
+~~~
+   
+ 
 ### Tarea 8: Imaginemos que lo cambiamos por un nuevo disco nuevo (el dispositivo de bloque se llama igual), añádelo al array y comprueba como se sincroniza con el anterior.
-    
+
+~~~
+vagrant@Almacenamiento:~$ sudo mdadm /dev/md1 --add /dev/sdb
+mdadm: added /dev/sdb
+vagrant@Almacenamiento:~$ sudo mdadm --detail /dev/md1
+/dev/md1:
+           Version : 1.2
+     Creation Time : Thu Oct  3 15:34:59 2019
+        Raid Level : raid5
+        Array Size : 2093056 (2044.00 MiB 2143.29 MB)
+     Used Dev Size : 1046528 (1022.00 MiB 1071.64 MB)
+      Raid Devices : 3
+     Total Devices : 3
+       Persistence : Superblock is persistent
+
+       Update Time : Thu Oct  3 16:38:24 2019
+             State : clean, degraded, recovering 
+    Active Devices : 2
+   Working Devices : 3
+    Failed Devices : 0
+     Spare Devices : 1
+
+            Layout : left-symmetric
+        Chunk Size : 512K
+
+Consistency Policy : resync
+
+    Rebuild Status : 27% complete
+
+              Name : Almacenamiento:1  (local to host Almacenamiento)
+              UUID : 3257002e:c399d4cf:acd05aab:66463050
+            Events : 64
+
+    Number   Major   Minor   RaidDevice State
+       2       8       48        0      active sync   /dev/sdd
+       3       8       32        1      active sync   /dev/sdc
+       4       8       16        2      spare rebuilding   /dev/sdb
+~~~
+
+
 ### Tarea 9: Añade otro disco como reserva. Vuelve a simular el fallo de un disco y comprueba como automática se realiza la sincronización con el disco de reserva.
+
+Fallo del disco:
+
+~~~
+vagrant@Almacenamiento:~$ sudo mdadm /dev/md1 -f /dev/sdd
+mdadm: set /dev/sdd faulty in /dev/md1
+vagrant@Almacenamiento:~$ sudo mdadm --detail /dev/md1
+/dev/md1:
+           Version : 1.2
+     Creation Time : Thu Oct  3 15:34:59 2019
+        Raid Level : raid5
+        Array Size : 2093056 (2044.00 MiB 2143.29 MB)
+     Used Dev Size : 1046528 (1022.00 MiB 1071.64 MB)
+      Raid Devices : 3
+     Total Devices : 3
+       Persistence : Superblock is persistent
+
+       Update Time : Thu Oct  3 16:39:42 2019
+             State : clean, degraded 
+    Active Devices : 2
+   Working Devices : 2
+    Failed Devices : 1
+     Spare Devices : 0
+
+            Layout : left-symmetric
+        Chunk Size : 512K
+
+Consistency Policy : resync
+
+              Name : Almacenamiento:1  (local to host Almacenamiento)
+              UUID : 3257002e:c399d4cf:acd05aab:66463050
+            Events : 79
+
+    Number   Major   Minor   RaidDevice State
+       -       0        0        0      removed
+       3       8       32        1      active sync   /dev/sdc
+       4       8       16        2      active sync   /dev/sdb
+
+       2       8       48        -      faulty   /dev/sdd
+~~~
+
+Eliminamos el disco y se sincroniza el de reserva:
+
+~~~
+vagrant@Almacenamiento:~$ sudo mdadm --detail /dev/md1
+/dev/md1:
+           Version : 1.2
+     Creation Time : Thu Oct  3 15:34:59 2019
+        Raid Level : raid5
+        Array Size : 2093056 (2044.00 MiB 2143.29 MB)
+     Used Dev Size : 1046528 (1022.00 MiB 1071.64 MB)
+      Raid Devices : 3
+     Total Devices : 2
+       Persistence : Superblock is persistent
+
+       Update Time : Thu Oct  3 16:40:38 2019
+             State : clean, degraded 
+    Active Devices : 2
+   Working Devices : 2
+    Failed Devices : 0
+     Spare Devices : 0
+
+            Layout : left-symmetric
+        Chunk Size : 512K
+
+Consistency Policy : resync
+
+              Name : Almacenamiento:1  (local to host Almacenamiento)
+              UUID : 3257002e:c399d4cf:acd05aab:66463050
+            Events : 80
+
+    Number   Major   Minor   RaidDevice State
+       -       0        0        0      removed
+       3       8       32        1      active sync   /dev/sdc
+       4       8       16        2      active sync   /dev/sdb
+~~~
+
     
 ### Tarea 10: Redimensiona el volumen y el sistema de archivo de 500Mb al tamaño del raid.
+
+~~~
+vagrant@Almacenamiento:~$ sudo fdisk /dev/md1
+
+Welcome to fdisk (util-linux 2.33.1).
+Changes will remain in memory only, until you decide to write them.
+Be careful before using the write command.
+
+
+Command (m for help): d
+Selected partition 1
+Partition 1 has been deleted.
+
+Command (m for help): w
+The partition table has been altered.
+Failed to remove partition 1 from system: Device or resource busy
+
+The kernel still uses the old partitions. The new table will be used at the next reboot. 
+Syncing disks.
+
+vagrant@Almacenamiento:~$ sudo fdisk /dev/md1
+
+Welcome to fdisk (util-linux 2.33.1).
+Changes will remain in memory only, until you decide to write them.
+Be careful before using the write command.
+
+
+Command (m for help): n
+Partition type
+   p   primary (0 primary, 0 extended, 4 free)
+   e   extended (container for logical partitions)
+Select (default p): 
+
+Using default response p.
+Partition number (1-4, default 1): 
+First sector (2048-4186111, default 2048): 
+Last sector, +/-sectors or +/-size{K,M,G,T,P} (2048-4186111, default 4186111): 
+
+Created a new partition 1 of type 'Linux' and of size 2 GiB.
+Partition #1 contains a xfs signature.
+
+Do you want to remove the signature? [Y]es/[N]o: n
+
+Command (m for help): w
+
+The partition table has been altered.
+Failed to add partition 1 to system: Device or resource busy
+
+The kernel still uses the old partitions. The new table will be used at the next reboot. 
+Syncing disks.
+
+~~~
+
+
 
 
