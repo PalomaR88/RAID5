@@ -172,10 +172,77 @@ sdd  linux_ Almacenamiento:1
 
 Si no se encuentra el comando mkfs.xfs se debe descargar el paquete **xfsprogs**
 
+
 ### Tarea 5: Monta el volumen en el directorio /mnt/raid5 y crea un fichero. ¿Qué tendríamos que hacer para que este punto de montaje sea permanente?
-   
+
+~~~
+vagrant@Almacenamiento:~$ sudo mkdir /mnt/raid5
+vagrant@Almacenamiento:~$ sudo mount /dev/md1p1 /mnt/raid5/
+vagrant@Almacenamiento:~$ lsblk
+NAME      MAJ:MIN RM  SIZE RO TYPE  MOUNTPOINT
+sda         8:0    0 19.8G  0 disk  
+├─sda1      8:1    0 18.8G  0 part  /
+├─sda2      8:2    0    1K  0 part  
+└─sda5      8:5    0 1021M  0 part  [SWAP]
+sdb         8:16   0    1G  0 disk  
+└─md1       9:1    0 1022M  0 raid5 
+  └─md1p1 259:1    0  500M  0 part  /mnt/raid5
+sdc         8:32   0    1G  0 disk  
+└─md1       9:1    0 1022M  0 raid5 
+  └─md1p1 259:1    0  500M  0 part  /mnt/raid5
+sdd         8:48   0    1G  0 disk  
+└─md1       9:1    0 1022M  0 raid5 
+  └─md1p1 259:1    0  500M  0 part  /mnt/raid5
+vagrant@Almacenamiento:~$ sudo touch /mnt/raid5/prueba
+vagrant@Almacenamiento:~$ ls /mnt/raid5/prueba 
+/mnt/raid5/prueba
+~~~
+
+Para montar el raid de forma permanente hay que editar el fichero fstab.
+
+
 ### Tarea 6: Marca un disco como estropeado. Muestra el estado del raid para comprobar que un disco falla. ¿Podemos acceder al fichero?
-    
+
+~~~
+vagrant@Almacenamiento:~$ sudo mdadm /dev/md1 -f /dev/sdb1
+mdadm: stat failed for /dev/sdb1: No such file or directory
+vagrant@Almacenamiento:~$ sudo mdadm --detail /dev/md1
+/dev/md1:
+           Version : 1.2
+     Creation Time : Thu Oct  3 15:34:59 2019
+        Raid Level : raid5
+        Array Size : 1046528 (1022.00 MiB 1071.64 MB)
+     Used Dev Size : 1046528 (1022.00 MiB 1071.64 MB)
+      Raid Devices : 2
+     Total Devices : 3
+       Persistence : Superblock is persistent
+
+       Update Time : Thu Oct  3 15:55:37 2019
+             State : clean 
+    Active Devices : 2
+   Working Devices : 2
+    Failed Devices : 1
+     Spare Devices : 0
+
+            Layout : left-symmetric
+        Chunk Size : 512K
+
+Consistency Policy : resync
+
+              Name : Almacenamiento:1  (local to host Almacenamiento)
+              UUID : 3257002e:c399d4cf:acd05aab:66463050
+            Events : 37
+
+    Number   Major   Minor   RaidDevice State
+       2       8       48        0      active sync   /dev/sdd
+       3       8       32        1      active sync   /dev/sdc
+
+       0       8       16        -      faulty   /dev/sdb
+vagrant@Almacenamiento:~$ ls /mnt/raid5/
+prueba
+~~~
+
+
 ### Tarea 7: Una vez marcado como estropeado, lo tenemos que retirar del raid.
     
 ### Tarea 8: Imaginemos que lo cambiamos por un nuevo disco nuevo (el dispositivo de bloque se llama igual), añádelo al array y comprueba como se sincroniza con el anterior.
