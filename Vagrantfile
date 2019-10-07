@@ -4,7 +4,8 @@
  Vagrant.configure("2") do |config|
   disco = ".vagrant/disco1.vdi"
   disco2 = ".vagrant/disco2.vdi"
-  disco3=".vagrant/disco3.vdi"  
+  disco3=".vagrant/disco3.vdi" 
+  disco4=".vagrant/disco4.vdi" 
   config.vm.box = "debian/buster64"
   config.vm.hostname = "Almacenamiento"
   config.vm.network :public_network,:bridge=>"wlp1s0"   
@@ -21,9 +22,11 @@
       v.customize ["createhd", "--filename", disco3, "--size", 1 *  1024]
     end
       v.customize ["storageattach", :id, "--storagectl", "SATA Controller", "--port", 3,"--device", 0, "--type", "hdd", "--medium", disco3]
-
+    if not File.exist?(disco4)
+      v.customize ["createhd", "--filename", disco4, "--size", 1 *  1024]
+    end
+      v.customize ["storageattach", :id, "--storagectl", "SATA Controller", "--port", 4,"--device", 0, "--type", "hdd", "--medium", disco4]
   config.vm.provision "shell", run: "always",
     inline: "sudo apt-get install -y mdadm"
   end
  end
-
